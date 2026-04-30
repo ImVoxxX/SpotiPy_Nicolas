@@ -1,3 +1,7 @@
+# Quick Disclaimer
+
+This is a one-person project for a portfolio and probably won't be a public repository. So, if you have access to this, please, use cautiously as this doesn't have any type of security measure. This was made with the sole intent of challenging myself with my abilities and not make a full applicable and usable app.
+
 # SpotiPy_Nicolas
 
 A non-exact, Spotify-flavored web app built on top of the [spotipy](https://spotipy.readthedocs.io/) library. Log in with your real Spotify account and browse your top tracks, top artists, recently played, your playlists, and search the catalog — all in a Spotify-style dark UI with 30-second preview playback.
@@ -68,6 +72,27 @@ Open <http://127.0.0.1:5000> in your browser, log in with Spotify, and explore.
 - Full-track playback would require Spotify Premium and the Web Playback SDK — out of scope for this replica.
 - Spotify deprecated several endpoints (recommendations, related artists, audio features) for new apps in late 2024. This project intentionally avoids those.
 - Built with Flask, spotipy, and vanilla HTML/CSS/JS — no build step.
+
+## Rights & Legal
+
+This project is an **unofficial, non-commercial fan replica** built for educational and portfolio purposes only. It is not affiliated with, endorsed by, or sponsored by Spotify AB.
+
+### Spotify
+
+All music data, artwork, track metadata, and audio previews are served directly from the **Spotify Web API** and remain the intellectual property of Spotify AB and the respective rights holders (artists, labels, distributors). Use of the Spotify API is governed by the [Spotify Developer Terms of Service](https://developer.spotify.com/terms) and the [Spotify Platform Rules](https://developer.spotify.com/documentation/design-and-branding/). This project complies with those terms by:
+
+- Using OAuth 2.0 as required — no credentials are stored server-side beyond the session token.
+- Limiting playback to the 30-second `preview_url` clips provided by the API (full-track streaming is not implemented).
+- Not reselling, redistributing, or caching Spotify content beyond what the API permits.
+- Displaying Spotify branding and attribution where content is sourced from Spotify.
+
+### Spotipy
+
+This app uses the [spotipy](https://spotipy.readthedocs.io/) Python library, which is licensed under the **MIT License**. spotipy is an independent, community-maintained wrapper and is not an official Spotify product.
+
+### This project
+
+The source code in this repository is released for **personal and educational use only**. It is not intended for commercial deployment, and no warranty is provided. If you fork or adapt this code, ensure your own usage remains compliant with the Spotify Developer Terms of Service.
 
 ## Project layout
 
