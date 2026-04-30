@@ -4,27 +4,66 @@
 {% block title %}{{ playlist.name }} · Spotipy{% endblock %}
 
 {% block content %}
-<header class="detail-header">
-    {% if playlist.images %}
-        <img class="detail-cover" src="{{ playlist.images[0].url }}" alt="">
-    {% else %}
-        <div class="detail-cover detail-cover-empty"></div>
-    {% endif %}
+<header class="detail-header" data-playlist-id="{{ playlist.id }}">
+    <div class="detail-cover-wrap">
+        {% if playlist.images %}
+            <img class="detail-cover" src="{{ playlist.images[0].url }}" alt="" id="pl-cover-img">
+        {% else %}
+            <div class="detail-cover detail-cover-empty" id="pl-cover-img"></div>
+        {% endif %}
+        <label class="detail-cover-overlay" title="Change photo">
+            <span class="detail-cover-edit-icon">✎</span>
+            <span class="detail-cover-edit-label">Change photo</span>
+            <input type="file" class="pl-cover-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+        </label>
+    </div>
     <div class="detail-meta">
         <div class="detail-kind">Playlist</div>
-        <h1 class="detail-title">{{ playlist.name }}</h1>
+        <div class="pl-name-row">
+            <h1 class="detail-title" id="pl-title">{{ playlist.name }}</h1>
+            <input class="detail-title-input" id="pl-title-input" type="text"
+                   value="{{ playlist.name }}" maxlength="100" style="display:none">
+            <button class="pl-edit-name-btn" type="button" title="Edit name">✎</button>
+        </div>
+        <div class="pl-edit-actions" style="display:none">
+            <button class="btn btn-primary pl-save-btn" type="button">Save</button>
+            <button class="pl-cancel-btn" type="button">Cancel</button>
+        </div>
         {% if playlist.description %}
             <p class="muted detail-desc">{{ playlist.description | safe }}</p>
         {% endif %}
         <div class="detail-stats">
             <strong>{{ playlist.owner.display_name }}</strong>
             <span>·</span>
-            <span>{{ playlist.tracks.total }} song{{ '' if playlist.tracks.total == 1 else 's' }}</span>
+            <span>{{ total }} song{{ '' if total == 1 else 's' }}</span>
         </div>
     </div>
 </header>
 
-<table class="track-list">
+<div class="pl-controls">
+    {% if tracks %}
+    <button class="pl-play-btn" type="button"
+            data-uri="{{ tracks[0].uri }}"
+            data-context-uri="{{ playlist.uri }}"
+            data-index="0"
+            aria-label="Play playlist">▶</button>
+    {% else %}
+    <button class="pl-play-btn" type="button" disabled aria-label="Play playlist">▶</button>
+    {% endif %}
+    <button class="pin-btn" type="button"
+            data-playlist-id="{{ playlist.id }}"
+            aria-label="{{ 'Unpin' if playlist.id in pinned_ids else 'Pin' }}"
+            title="{{ 'Unpin' if playlist.id in pinned_ids else 'Pin' }}">
+        {{ '★' if playlist.id in pinned_ids else '☆' }}
+    </button>
+
+    <div class="pl-search-wrap">
+        <span class="pl-search-icon">⌕</span>
+        <input type="search" id="pl-search" class="pl-search" placeholder="Search in playlist" autocomplete="off">
+    </div>
+</div>
+
+<table class="track-list" id="pl-track-list">
     <thead>
         <tr>
             <th class="col-num">#</th>
@@ -34,7 +73,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for t in tracks %}{{ track_row(t, loop.index) }}{% endfor %}
+        {% for t in tracks %}{{ track_row(t, loop.index, context_uri=playlist.uri, index=loop.index0) }}{% endfor %}
     </tbody>
 </table>
 {% endblock %}

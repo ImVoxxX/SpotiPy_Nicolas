@@ -33,7 +33,7 @@
     </thead>
     <tbody>
         {% set art = album.images[0].url if album.images else None %}
-        {% for t in album.tracks['items'] %}{{ simple_track_row(t, loop.index, art) }}{% endfor %}
+        {% for t in album.tracks['items'] %}{{ simple_track_row(t, loop.index, art, context_uri=album.uri, index=loop.index0) }}{% endfor %}
     </tbody>
 </table>
 {% endblock %}

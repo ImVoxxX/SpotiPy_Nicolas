@@ -30,17 +30,13 @@
 </a>
 {% endmacro %}
 
-{% macro track_row(t, num=None, show_album=true) %}
+{% macro track_row(t, num=None, show_album=true, context_uri=None, index=None) %}
 <tr>
     <td class="track-num-cell">
         {% if num %}<span class="track-num">{{ num }}</span>{% endif %}
-        {% if t.preview_url %}
-        <button type="button" class="track-play"
-                data-preview="{{ t.preview_url }}"
-                data-title="{{ t.name }}"
-                data-artist="{{ t.artists | map(attribute='name') | join(', ') }}"
-                {% if t.album and t.album.images %}data-art="{{ t.album.images[0].url }}"{% endif %}>▶</button>
-        {% endif %}
+        <button type="button" class="track-play" data-uri="{{ t.uri }}"
+            {% if context_uri %}data-context-uri="{{ context_uri }}"{% endif %}
+            {% if index is not none %}data-index="{{ index }}"{% endif %}>▶</button>
     </td>
     <td>
         <div class="track-cell">
@@ -68,17 +64,13 @@
 </tr>
 {% endmacro %}
 
-{% macro simple_track_row(t, num=None, art=None) %}
+{% macro simple_track_row(t, num=None, art=None, context_uri=None, index=None) %}
 <tr>
     <td class="track-num-cell">
         {% if num %}<span class="track-num">{{ num }}</span>{% endif %}
-        {% if t.preview_url %}
-        <button type="button" class="track-play"
-                data-preview="{{ t.preview_url }}"
-                data-title="{{ t.name }}"
-                data-artist="{{ t.artists | map(attribute='name') | join(', ') }}"
-                {% if art %}data-art="{{ art }}"{% endif %}>▶</button>
-        {% endif %}
+        <button type="button" class="track-play" data-uri="{{ t.uri }}"
+            {% if context_uri %}data-context-uri="{{ context_uri }}"{% endif %}
+            {% if index is not none %}data-index="{{ index }}"{% endif %}>▶</button>
     </td>
     <td>
         <div class="track-title">{{ t.name }}</div>
