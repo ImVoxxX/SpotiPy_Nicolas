@@ -15,19 +15,20 @@
             <div class="sidebar-section">
                 <a class="logo" href="{{ url_for('home') }}">
                     <span class="logo-mark"></span>
-                    <span>Spotipy Nicolas</span>
+                    <span class="logo-text">Spotipy Nicolas</span>
                 </a>
                 <nav class="nav-main">
                     <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
-                        <span class="nav-icon">⌂</span> Home
+                        <span class="nav-icon">⌂</span><span class="nav-label"> Home</span>
                     </a>
                     <a class="nav-link {% if request.endpoint == 'search' %}active{% endif %}" href="{{ url_for('search') }}">
-                        <span class="nav-icon">⌕</span> Search
+                        <span class="nav-icon">⌕</span><span class="nav-label"> Search</span>
                     </a>
                     <a class="nav-link {% if request.endpoint == 'library' %}active{% endif %}" href="{{ url_for('library') }}">
-                        <span class="nav-icon">☰</span> Your Library
+                        <span class="nav-icon">☰</span><span class="nav-label"> Your Library</span>
                     </a>
                 </nav>
+                <button class="collapse-btn" id="sidebar-collapse-btn" aria-label="Toggle sidebar">«</button>
             </div>
             <div class="sidebar-section sidebar-playlists">
                 <h3>Playlists</h3>
@@ -38,7 +39,14 @@
                             {% set ns.divider_shown = true %}
                             <li class="sidebar-pin-divider"></li>
                         {% endif %}
-                        <li><a href="{{ url_for('playlist', playlist_id=pl.id) }}">{{ pl.name }}</a></li>
+                        <li><a href="{{ url_for('playlist', playlist_id=pl.id) }}" title="{{ pl.name }}">
+                            {% if pl.images %}
+                                <img class="sidebar-pl-img" src="{{ pl.images[0].url }}" alt="">
+                            {% else %}
+                                <div class="sidebar-pl-img sidebar-pl-img--empty"></div>
+                            {% endif %}
+                            <span>{{ pl.name }}</span>
+                        </a></li>
                     {% endfor %}
                 </ul>
             </div>

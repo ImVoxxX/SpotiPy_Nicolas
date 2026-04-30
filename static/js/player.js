@@ -71,9 +71,9 @@
         });
 
         player.addListener('player_state_changed', state => {
-            if (!state) return;
+            if (!state) { artEl.hidden = true; return; }
             const track = state.track_window.current_track;
-            if (!track) return;
+            if (!track) { artEl.hidden = true; return; }
 
             titleEl.textContent  = track.name;
             artistEl.textContent = track.artists.map(a => a.name).join(', ');
@@ -536,7 +536,7 @@
     // ---- Panel resize ----
     const root = document.documentElement;
 
-    function makeResizable(handle, prop, getValue, min, max) {
+    function makeResizable(handle, prop, getValue, min, max, onEnd) {
         handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
             handle.classList.add('is-dragging');
@@ -553,6 +553,7 @@
                 document.body.style.cursor = '';
                 document.removeEventListener('mousemove', onDrag);
                 document.removeEventListener('mouseup',   onUp);
+                if (onEnd) onEnd();
             }
             document.addEventListener('mousemove', onDrag);
             document.addEventListener('mouseup',   onUp);
@@ -563,7 +564,15 @@
         document.querySelector('.resize-handle--sidebar'),
         '--sidebar-w',
         (e) => e.clientX,
-        160, 400
+        56, 400,
+        () => {
+            const w = getComputedStyle(root).getPropertyValue('--sidebar-w').trim();
+            const sidebar = document.querySelector('.sidebar');
+            const lsKey = sidebar.classList.contains('sidebar--collapsed')
+                ? 'sidebar-collapsed-w'
+                : 'sidebar-saved-w';
+            localStorage.setItem(lsKey, w);
+        }
     );
     makeResizable(
         document.querySelector('.resize-handle--right-panel'),
@@ -577,4 +586,36 @@
         (e) => window.innerHeight - e.clientY,
         72, 160
     );
+})();
+
+// ---- Sidebar collapse ----
+(function () {
+    const sidebar = document.querySelector('.sidebar');
+    const app     = document.querySelector('.app');
+    const btn     = document.getElementById('sidebar-collapse-btn');
+    if (!btn || !sidebar || !app) return;
+
+    const root         = document.documentElement;
+    const KEY          = 'sidebar-collapsed';
+    const EXPANDED_KEY = 'sidebar-saved-w';
+    const COLLAPSED_KEY = 'sidebar-collapsed-w';
+
+    function setCollapsed(on) {
+        const cur = getComputedStyle(root).getPropertyValue('--sidebar-w').trim();
+        sidebar.classList.toggle('sidebar--collapsed', on);
+        app.classList.toggle('sidebar-collapsed', on);
+        btn.textContent = on ? '»' : '«';
+        if (on) {
+            localStorage.setItem(EXPANDED_KEY, cur);
+            root.style.setProperty('--sidebar-w', localStorage.getItem(COLLAPSED_KEY) || '72px');
+        } else {
+            localStorage.setItem(COLLAPSED_KEY, cur);
+            root.style.setProperty('--sidebar-w', localStorage.getItem(EXPANDED_KEY) || '240px');
+        }
+        localStorage.setItem(KEY, on ? '1' : '0');
+    }
+
+    btn.addEventListener('click', () => setCollapsed(!sidebar.classList.contains('sidebar--collapsed')));
+
+    if (localStorage.getItem(KEY) === '1') setCollapsed(true);
 })();
