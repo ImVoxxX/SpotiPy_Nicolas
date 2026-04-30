@@ -1,0 +1,93 @@
+{% macro album_card(al) %}
+<a class="card" href="{{ url_for('album', album_id=al.id) }}">
+    {% if al.images %}<img src="{{ al.images[0].url }}" alt="">{% endif %}
+    <div class="card-title">{{ al.name }}</div>
+    <div class="card-sub">{{ al.artists | map(attribute='name') | join(', ') }}</div>
+</a>
+{% endmacro %}
+
+{% macro artist_card(ar) %}
+<a class="card artist" href="{{ url_for('artist', artist_id=ar.id) }}">
+    {% if ar.images %}<img src="{{ ar.images[0].url }}" alt="">{% endif %}
+    <div class="card-title">{{ ar.name }}</div>
+    <div class="card-sub">Artist</div>
+</a>
+{% endmacro %}
+
+{% macro playlist_card(pl) %}
+<a class="card" href="{{ url_for('playlist', playlist_id=pl.id) }}">
+    {% if pl.images %}<img src="{{ pl.images[0].url }}" alt="">{% endif %}
+    <div class="card-title">{{ pl.name }}</div>
+    <div class="card-sub">{% if pl.description %}{{ pl.description }}{% else %}By {{ pl.owner.display_name }}{% endif %}</div>
+</a>
+{% endmacro %}
+
+{% macro track_card(t) %}
+<a class="card" href="{% if t.album %}{{ url_for('album', album_id=t.album.id) }}{% else %}#{% endif %}">
+    {% if t.album and t.album.images %}<img src="{{ t.album.images[0].url }}" alt="">{% endif %}
+    <div class="card-title">{{ t.name }}</div>
+    <div class="card-sub">{{ t.artists | map(attribute='name') | join(', ') }}</div>
+</a>
+{% endmacro %}
+
+{% macro track_row(t, num=None, show_album=true) %}
+<tr>
+    <td class="track-num-cell">
+        {% if num %}<span class="track-num">{{ num }}</span>{% endif %}
+        {% if t.preview_url %}
+        <button type="button" class="track-play"
+                data-preview="{{ t.preview_url }}"
+                data-title="{{ t.name }}"
+                data-artist="{{ t.artists | map(attribute='name') | join(', ') }}"
+                {% if t.album and t.album.images %}data-art="{{ t.album.images[0].url }}"{% endif %}>▶</button>
+        {% endif %}
+    </td>
+    <td>
+        <div class="track-cell">
+            {% if t.album and t.album.images %}
+                <img src="{{ t.album.images[-1].url }}" alt="">
+            {% endif %}
+            <div>
+                <div class="track-title">{{ t.name }}</div>
+                <div>
+                    {% for a in t.artists %}
+                        <a href="{{ url_for('artist', artist_id=a.id) }}" class="track-artist">{{ a.name }}</a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </td>
+    {% if show_album %}
+    <td class="track-album">
+        {% if t.album %}
+            <a href="{{ url_for('album', album_id=t.album.id) }}">{{ t.album.name }}</a>
+        {% endif %}
+    </td>
+    {% endif %}
+    <td class="track-duration">{{ t.duration_ms | duration }}</td>
+</tr>
+{% endmacro %}
+
+{% macro simple_track_row(t, num=None, art=None) %}
+<tr>
+    <td class="track-num-cell">
+        {% if num %}<span class="track-num">{{ num }}</span>{% endif %}
+        {% if t.preview_url %}
+        <button type="button" class="track-play"
+                data-preview="{{ t.preview_url }}"
+                data-title="{{ t.name }}"
+                data-artist="{{ t.artists | map(attribute='name') | join(', ') }}"
+                {% if art %}data-art="{{ art }}"{% endif %}>▶</button>
+        {% endif %}
+    </td>
+    <td>
+        <div class="track-title">{{ t.name }}</div>
+        <div>
+            {% for a in t.artists %}
+                <a href="{{ url_for('artist', artist_id=a.id) }}" class="track-artist">{{ a.name }}</a>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    </td>
+    <td class="track-duration">{{ t.duration_ms | duration }}</td>
+</tr>
+{% endmacro %}

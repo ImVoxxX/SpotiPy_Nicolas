@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import album_card, artist_card, playlist_card, track_row %}
+
+{% block title %}{% if q %}Search: {{ q }}{% else %}Search{% endif %} · Spotipy{% endblock %}
+
+{% block content %}
+{% if not q %}
+    <section class="empty-state">
+        <h1>Search</h1>
+        <p class="muted">Type into the bar above to find songs, artists, albums, and playlists.</p>
+    </section>
+{% else %}
+    <section>
+        <h1>Results for "{{ q }}"</h1>
+    </section>
+
+    {% if results.tracks and results.tracks['items'] %}
+    <section class="row">
+        <h2>Songs</h2>
+        <table class="track-list">
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th>Title</th>
+                    <th class="col-album">Album</th>
+                    <th class="col-time">Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in results.tracks['items'][:8] %}{{ track_row(t, loop.index) }}{% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    {% if results.artists and results.artists['items'] %}
+    <section class="row">
+        <h2>Artists</h2>
+        <div class="card-grid">
+            {% for a in results.artists['items'] %}{{ artist_card(a) }}{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if results.albums and results.albums['items'] %}
+    <section class="row">
+        <h2>Albums</h2>
+        <div class="card-grid">
+            {% for al in results.albums['items'] %}{{ album_card(al) }}{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if results.playlists and results.playlists['items'] %}
+    <section class="row">
+        <h2>Playlists</h2>
+        <div class="card-grid">
+            {% for pl in results.playlists['items'] %}{% if pl %}{{ playlist_card(pl) }}{% endif %}{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+{% endif %}
+{% endblock %}

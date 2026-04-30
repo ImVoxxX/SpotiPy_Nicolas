@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import playlist_card, artist_card, track_row %}
+
+{% block title %}Your Library · Spotipy{% endblock %}
+
+{% block content %}
+<section>
+    <h1>Your Library</h1>
+</section>
+
+{% if top_artists %}
+<section class="row">
+    <h2>Your top artists</h2>
+    <div class="card-grid">
+        {% for a in top_artists %}{{ artist_card(a) }}{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if top_tracks %}
+<section class="row">
+    <h2>Your top tracks</h2>
+    <table class="track-list">
+        <thead>
+            <tr>
+                <th class="col-num">#</th>
+                <th>Title</th>
+                <th class="col-album">Album</th>
+                <th class="col-time">Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in top_tracks %}{{ track_row(t, loop.index) }}{% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+{% if playlists %}
+<section class="row">
+    <h2>Your playlists</h2>
+    <div class="card-grid">
+        {% for pl in playlists %}{{ playlist_card(pl) }}{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if saved %}
+<section class="row">
+    <h2>Liked songs (recent)</h2>
+    <table class="track-list">
+        <thead>
+            <tr>
+                <th class="col-num">#</th>
+                <th>Title</th>
+                <th class="col-album">Album</th>
+                <th class="col-time">Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in saved %}{{ track_row(t, loop.index) }}{% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+{% endblock %}

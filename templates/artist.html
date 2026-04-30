@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import album_card, track_row %}
+
+{% block title %}{{ artist.name }} · Spotipy{% endblock %}
+
+{% block content %}
+<header class="detail-header artist">
+    {% if artist.images %}
+        <img class="detail-cover detail-cover-round" src="{{ artist.images[0].url }}" alt="">
+    {% endif %}
+    <div class="detail-meta">
+        <div class="detail-kind">Artist</div>
+        <h1 class="detail-title">{{ artist.name }}</h1>
+        {% if artist.followers and artist.followers.total %}
+            <div class="detail-stats">
+                {{ '{:,}'.format(artist.followers.total) }} followers
+                {% if artist.genres %}
+                    <span>·</span>
+                    <span>{{ artist.genres[:3] | join(', ') }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</header>
+
+{% if top_tracks %}
+<section class="row">
+    <h2>Popular</h2>
+    <table class="track-list">
+        <tbody>
+            {% for t in top_tracks[:5] %}{{ track_row(t, loop.index) }}{% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+{% if albums %}
+<section class="row">
+    <h2>Discography</h2>
+    <div class="card-grid">
+        {% for al in albums %}{{ album_card(al) }}{% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

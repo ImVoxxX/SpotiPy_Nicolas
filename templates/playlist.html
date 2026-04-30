@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import track_row %}
+
+{% block title %}{{ playlist.name }} · Spotipy{% endblock %}
+
+{% block content %}
+<header class="detail-header">
+    {% if playlist.images %}
+        <img class="detail-cover" src="{{ playlist.images[0].url }}" alt="">
+    {% else %}
+        <div class="detail-cover detail-cover-empty"></div>
+    {% endif %}
+    <div class="detail-meta">
+        <div class="detail-kind">Playlist</div>
+        <h1 class="detail-title">{{ playlist.name }}</h1>
+        {% if playlist.description %}
+            <p class="muted detail-desc">{{ playlist.description | safe }}</p>
+        {% endif %}
+        <div class="detail-stats">
+            <strong>{{ playlist.owner.display_name }}</strong>
+            <span>·</span>
+            <span>{{ playlist.tracks.total }} song{{ '' if playlist.tracks.total == 1 else 's' }}</span>
+        </div>
+    </div>
+</header>
+
+<table class="track-list">
+    <thead>
+        <tr>
+            <th class="col-num">#</th>
+            <th>Title</th>
+            <th class="col-album">Album</th>
+            <th class="col-time">Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in tracks %}{{ track_row(t, loop.index) }}{% endfor %}
+    </tbody>
+</table>
+{% endblock %}

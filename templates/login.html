@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log in · Spotipy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+    <div class="login-card">
+        <div class="login-logo">
+            <span class="logo-mark big"></span>
+            <span>Spotipy</span>
+        </div>
+        <h1>Listen with your Spotify account</h1>
+        <p class="muted">A non-exact replica built on top of the spotipy library — log in with your real Spotify account to continue.</p>
+        <a class="btn btn-primary" href="{{ auth_url }}">Continue with Spotify</a>
+    </div>
+</body>
+</html>

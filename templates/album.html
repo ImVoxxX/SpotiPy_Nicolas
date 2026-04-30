@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import simple_track_row %}
+
+{% block title %}{{ album.name }} · Spotipy{% endblock %}
+
+{% block content %}
+<header class="detail-header">
+    {% if album.images %}
+        <img class="detail-cover" src="{{ album.images[0].url }}" alt="">
+    {% endif %}
+    <div class="detail-meta">
+        <div class="detail-kind">{{ album.album_type | title }}</div>
+        <h1 class="detail-title">{{ album.name }}</h1>
+        <div class="detail-stats">
+            {% for a in album.artists %}
+                <a href="{{ url_for('artist', artist_id=a.id) }}"><strong>{{ a.name }}</strong></a>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+            <span>·</span>
+            <span>{{ album.release_date[:4] }}</span>
+            <span>·</span>
+            <span>{{ album.total_tracks }} track{{ '' if album.total_tracks == 1 else 's' }}</span>
+        </div>
+    </div>
+</header>
+
+<table class="track-list">
+    <thead>
+        <tr>
+            <th class="col-num">#</th>
+            <th>Title</th>
+            <th class="col-time">Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set art = album.images[0].url if album.images else None %}
+        {% for t in album.tracks['items'] %}{{ simple_track_row(t, loop.index, art) }}{% endfor %}
+    </tbody>
+</table>
+{% endblock %}
