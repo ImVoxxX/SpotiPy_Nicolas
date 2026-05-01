@@ -17,7 +17,12 @@ A non-exact, Spotify-flavored web app built on top of the [spotipy](https://spot
 
 ## Setup
 
-### 1. Create a Spotify app
+### 1. Python and node versions needed to use the program
+
+Python: 3.13.1
+node: 18.17.0
+
+### 2. Create a Spotify app
 
 Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), click **Create app**, and grab the **Client ID** and **Client Secret**.
 
@@ -29,7 +34,7 @@ http://127.0.0.1:5000/callback
 
 > Spotify no longer accepts `http://localhost` for new apps — use `127.0.0.1`.
 
-### 2. Install dependencies
+### 3. Install dependencies
 
 ```bash
 python -m venv .venv
@@ -41,7 +46,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure environment
+### 4. Configure environment
 
 Copy `.env.example` to `.env` and fill in your credentials:
 
@@ -58,7 +63,7 @@ Generate a Flask secret key with:
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### 4. Run
+### 5. Run
 
 ```bash
 python app.py
