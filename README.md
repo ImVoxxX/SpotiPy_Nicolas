@@ -19,7 +19,7 @@ A non-exact, Spotify-flavored web app built on top of the [spotipy](https://spot
 
 ### 1. Python and node versions needed to use the program
 
-Python: 3.13.1
+Python: 3.13.1  
 node: 18.17.0
 
 ### 2. Create a Spotify app
