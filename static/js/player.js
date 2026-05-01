@@ -64,6 +64,7 @@
 
         player.addListener('ready', ({ device_id }) => {
             deviceId = device_id;
+            if (activeTab === 'queue') refreshQueue();
         });
 
         player.addListener('not_ready', () => {
@@ -94,6 +95,8 @@
             updateShuffleUI(state.shuffle);
             updateRepeatUI(state.repeat_mode);
             updateRightPanel(state);
+            updatePlButtons(state);
+            if (activeTab === 'queue') refreshQueue();
         });
 
         player.connect();
@@ -106,6 +109,7 @@
             if (!state || state.paused) return;
             setSeekPos(state.duration ? (state.position / state.duration) * 100 : 0);
             timeEl.textContent = fmt(state.position);
+            if (activeTab === 'lyrics') updateLyricsHighlight(state.position);
         });
     }, 1000);
 
@@ -237,11 +241,34 @@
             return;
         }
 
+        // Playlist shuffle button
+        const plShuffleBtn = e.target.closest('.pl-shuffle-btn');
+        if (plShuffleBtn) {
+            e.preventDefault();
+            if (!deviceId) return;
+            const contextUri = plShuffleBtn.dataset.playlistUri;
+            fetch('/shuffle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: deviceId, state: true }),
+            }).then(() => fetch('/play', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: deviceId, context_uri: contextUri }),
+            })).catch(() => {});
+            return;
+        }
+
         // Track play button (has data-uri)
         const trackBtn = e.target.closest('[data-uri]');
         if (trackBtn) {
             e.preventDefault();
             if (!deviceId) { alert('Player not ready yet — wait a moment and try again.'); return; }
+            // Playlist play button: toggle pause if this playlist is already playing
+            if (trackBtn.classList.contains('pl-play-btn') && trackBtn.dataset.isPlaying === '1') {
+                if (player) player.togglePlay();
+                return;
+            }
             const contextUri = trackBtn.dataset.contextUri;
             const idx        = trackBtn.dataset.index;
             const body = (contextUri && idx !== undefined)
@@ -411,12 +438,215 @@
 
     let lastArtistId = null;
 
+    // ---- Right Panel Tabs ----
+    const rpTabBtns        = document.querySelectorAll('.rp-tab-btn');
+    const rpViewNowPlaying = document.getElementById('rp-view-nowplaying');
+    const rpViewQueue      = document.getElementById('rp-view-queue');
+    const rpViewLyrics     = document.getElementById('rp-view-lyrics');
+    let activeTab = 'nowplaying';
+
+    function switchRpTab(view) {
+        activeTab = view;
+        rpTabBtns.forEach(btn => btn.classList.toggle('rp-tab-btn--active', btn.dataset.view === view));
+        rpViewNowPlaying.hidden = view !== 'nowplaying';
+        rpViewQueue.hidden      = view !== 'queue';
+        rpViewLyrics.hidden     = view !== 'lyrics';
+        if (view === 'queue') refreshQueue();
+        if (view === 'lyrics' && player) {
+            player.getCurrentState().then(state => {
+                if (state && state.track_window.current_track) {
+                    maybeLoadLyrics(state.track_window.current_track);
+                }
+            });
+        }
+    }
+
+    rpTabBtns.forEach(btn => btn.addEventListener('click', () => switchRpTab(btn.dataset.view)));
+
+    const playerQueueBtn = document.getElementById('player-queue-btn');
+    if (playerQueueBtn) {
+        playerQueueBtn.addEventListener('click', () => switchRpTab('queue'));
+    }
+
+    // ---- Queue View ----
+    const rpQvEmpty   = document.getElementById('rp-qv-empty');
+    const rpQvBody    = document.getElementById('rp-qv-body');
+    const rpQvCurrent = document.getElementById('rp-qv-current');
+    const rpQvList    = document.getElementById('rp-qv-list');
+    const rpQvNone    = document.getElementById('rp-qv-none');
+    let queueFetching = false;
+
+    // ---- Lyrics ----
+    const rpLyricsEmpty   = document.getElementById('rp-lyrics-empty');
+    const rpLyricsLoading = document.getElementById('rp-lyrics-loading');
+    const rpLyricsBody    = document.getElementById('rp-lyrics-body');
+    let syncedLines      = [];
+    let lastLyricsId     = null;
+    let lastActiveLyricIdx = -1;
+    let lyricsLoading    = false;
+
+    function parseLrc(lrc) {
+        return lrc.split('\n').map(line => {
+            const m = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)/);
+            if (!m) return null;
+            return { time: parseInt(m[1], 10) * 60 + parseFloat(m[2]), text: m[3].trim() };
+        }).filter(l => l && l.text);
+    }
+
+    function renderLyrics(synced, plain, instrumental) {
+        syncedLines = [];
+        lastActiveLyricIdx = -1;
+        if (instrumental) {
+            rpLyricsBody.innerHTML = '<p class="lyrics-line lyrics-line--instrumental">This track is instrumental</p>';
+            rpLyricsEmpty.style.display   = 'none';
+            rpLyricsLoading.style.display = 'none';
+            rpLyricsBody.style.display    = 'flex';
+            return;
+        }
+        if (synced) {
+            const lines = parseLrc(synced);
+            if (lines.length) {
+                syncedLines = lines;
+                rpLyricsBody.innerHTML = lines.map((l, i) =>
+                    `<p class="lyrics-line" data-idx="${i}">${esc(l.text)}</p>`
+                ).join('');
+                rpLyricsEmpty.style.display   = 'none';
+                rpLyricsLoading.style.display = 'none';
+                rpLyricsBody.style.display    = 'flex';
+                return;
+            }
+        }
+        if (plain) {
+            rpLyricsBody.innerHTML = plain.split('\n').filter(l => l.trim()).map(l =>
+                `<p class="lyrics-line lyrics-line--active">${esc(l)}</p>`
+            ).join('');
+            rpLyricsEmpty.style.display   = 'none';
+            rpLyricsLoading.style.display = 'none';
+            rpLyricsBody.style.display    = 'flex';
+            return;
+        }
+        rpLyricsBody.style.display    = 'none';
+        rpLyricsLoading.style.display = 'none';
+        rpLyricsEmpty.style.display   = '';
+    }
+
+    function maybeLoadLyrics(track) {
+        if (!track) return;
+        const id = track.id || track.uri;
+        if (id === lastLyricsId || lyricsLoading) return;
+        lastLyricsId  = id;
+        lyricsLoading = true;
+        rpLyricsBody.style.display    = 'none';
+        rpLyricsEmpty.style.display   = 'none';
+        rpLyricsLoading.style.display = '';
+        const params = new URLSearchParams({
+            track:    track.name,
+            artist:   track.artists.map(a => a.name).join(', '),
+            album:    track.album.name,
+            duration: Math.round((track.duration_ms || 0) / 1000),
+        });
+        fetch('/api/lyrics?' + params)
+            .then(r => r.json())
+            .then(d => renderLyrics(d.synced, d.plain, d.instrumental))
+            .catch(() => renderLyrics('', '', false))
+            .finally(() => { lyricsLoading = false; });
+    }
+
+    function updateLyricsHighlight(posMs) {
+        if (!syncedLines.length) return;
+        const posSec = posMs / 1000;
+        let idx = 0;
+        for (let i = 0; i < syncedLines.length; i++) {
+            if (syncedLines[i].time <= posSec) idx = i; else break;
+        }
+        if (idx === lastActiveLyricIdx) return;
+        lastActiveLyricIdx = idx;
+        rpLyricsBody.querySelectorAll('.lyrics-line').forEach((el, i) =>
+            el.classList.toggle('lyrics-line--active', i === idx)
+        );
+        const active = rpLyricsBody.querySelector(`.lyrics-line[data-idx="${idx}"]`);
+        if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function refreshQueue() {
+        if (queueFetching) return;
+        queueFetching = true;
+        fetch('/api/queue')
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => renderQueueView(data))
+            .catch(() => {
+                rpQvEmpty.style.display = '';
+                rpQvBody.style.display  = 'none';
+            })
+            .finally(() => { queueFetching = false; });
+    }
+
+    function renderQueueView(data) {
+        if (!data || !data.currently_playing) {
+            rpQvEmpty.style.display = '';
+            rpQvBody.style.display  = 'none';
+            return;
+        }
+        rpQvEmpty.style.display = 'none';
+        rpQvBody.style.display  = 'flex';
+        rpQvBody.style.flexDirection = 'column';
+
+        const ct    = data.currently_playing;
+        const ctImg = ct.album?.images?.[0];
+        rpQvCurrent.innerHTML = `
+            <div class="rp-qv-row">
+                ${ctImg ? `<img src="${esc(ctImg.url)}" alt="">` : '<div class="rp-qv-thumb-empty"></div>'}
+                <div class="rp-qv-text">
+                    <div class="rp-qv-title">${esc(ct.name)}</div>
+                    <div class="rp-qv-artist">${esc((ct.artists || []).map(a => a.name).join(', '))}</div>
+                </div>
+                <div class="rp-qv-duration">${fmt(ct.duration_ms)}</div>
+            </div>`;
+
+        const queue = data.queue || [];
+        if (queue.length === 0) {
+            rpQvList.innerHTML = '';
+            rpQvNone.hidden = false;
+        } else {
+            rpQvNone.hidden = true;
+            rpQvList.innerHTML = queue.map(t => {
+                const thumb = t.album?.images?.slice(-1)[0];
+                const thumbHtml = thumb
+                    ? `<img src="${esc(thumb.url)}" alt="">`
+                    : '<div class="rp-qv-thumb-empty"></div>';
+                return `<li class="rp-queue-item">
+                    <button class="rp-qv-btn" data-uri="${esc(t.uri)}">
+                        ${thumbHtml}
+                        <div class="rp-qv-text">
+                            <div class="rp-qv-title">${esc(t.name)}</div>
+                            <div class="rp-qv-artist">${esc((t.artists || []).map(a => a.name).join(', '))}</div>
+                        </div>
+                        <div class="rp-qv-duration">${fmt(t.duration_ms)}</div>
+                    </button>
+                </li>`;
+            }).join('');
+        }
+    }
+
     function esc(s) {
         return String(s ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    function updatePlButtons(state) {
+        const plPlayBtn    = document.querySelector('.pl-play-btn[data-context-uri]');
+        const plShuffleBtn = document.querySelector('.pl-shuffle-btn[data-playlist-uri]');
+        if (!plPlayBtn) return;
+        const isThisCtx = state && state.context?.uri === plPlayBtn.dataset.contextUri;
+        const playing   = isThisCtx && !state.paused;
+        plPlayBtn.innerHTML         = playing ? '❚❚' : '▶';
+        plPlayBtn.dataset.isPlaying = playing ? '1' : '0';
+        if (plShuffleBtn) {
+            plShuffleBtn.classList.toggle('ctrl-active', isThisCtx && state.shuffle);
+        }
     }
 
     function updateRightPanel(state) {
@@ -461,6 +691,8 @@
             }).join('');
         }
 
+        maybeLoadLyrics(track);
+
         // Artist info — only re-fetch when artist changes
         const artistId = track.artists[0]?.id;
         if (artistId && artistId !== lastArtistId) {
@@ -489,7 +721,9 @@
     // since the SDK listener is already set up above; re-read state for right panel
     setInterval(() => {
         if (!player) return;
-        player.getCurrentState().then(state => { if (state) updateRightPanel(state); });
+        player.getCurrentState().then(state => {
+            if (state) { updateRightPanel(state); updatePlButtons(state); }
+        });
     }, 2000);
 
     // ---- Right-click context menu ----

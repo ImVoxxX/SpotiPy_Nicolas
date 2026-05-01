@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Spotipy{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% if custom_bg %}
+    <style>
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: url('{{ custom_bg }}') center/cover no-repeat;
+            opacity: 0.15;
+        }
+        .main {
+            background: transparent;
+        }
+    </style>
+    {% endif %}
 </head>
 <body>
     <div class="app">
@@ -75,37 +90,74 @@
         </main>
 
         <aside class="right-panel">
-            <div class="rp-empty" id="rp-empty">
-                <div class="rp-empty-icon">♪</div>
-                <p>Nothing playing</p>
+            <div class="rp-tabs">
+                <button class="rp-tab-btn rp-tab-btn--active" data-view="nowplaying">Now Playing</button>
+                <button class="rp-tab-btn" data-view="queue">Queue</button>
+                <button class="rp-tab-btn" data-view="lyrics">Lyrics</button>
             </div>
-            <div class="rp-content" id="rp-content" style="display:none">
-                <div class="rp-section">
-                    <h3 class="rp-heading">Now Playing</h3>
-                    <div class="rp-cover-wrap">
-                        <img id="rp-art" src="" alt="">
+
+            <div id="rp-view-nowplaying" class="rp-view">
+                <div class="rp-empty" id="rp-empty">
+                    <div class="rp-empty-icon">♪</div>
+                    <p>Nothing playing</p>
+                </div>
+                <div class="rp-content" id="rp-content" style="display:none">
+                    <div class="rp-section">
+                        <h3 class="rp-heading">Now Playing</h3>
+                        <div class="rp-cover-wrap">
+                            <img id="rp-art" alt="">
+                        </div>
+                        <div id="rp-title" class="rp-now-title"></div>
+                        <div id="rp-artist-line" class="rp-now-artist"></div>
+                        <div id="rp-album" class="rp-now-album"></div>
                     </div>
-                    <div id="rp-title" class="rp-now-title"></div>
-                    <div id="rp-artist-line" class="rp-now-artist"></div>
-                    <div id="rp-album" class="rp-now-album"></div>
+                    <div class="rp-divider"></div>
+                    <div class="rp-section">
+                        <h3 class="rp-heading">Next Up</h3>
+                        <ul id="rp-queue" class="rp-queue"></ul>
+                        <p id="rp-queue-empty" class="rp-queue-none muted" hidden>End of queue</p>
+                    </div>
+                    <div class="rp-divider"></div>
+                    <div class="rp-section">
+                        <h3 class="rp-heading">About the Artist</h3>
+                        <div id="rp-artist-info" class="rp-artist-card-wrap"></div>
+                    </div>
                 </div>
-                <div class="rp-divider"></div>
-                <div class="rp-section">
-                    <h3 class="rp-heading">Next Up</h3>
-                    <ul id="rp-queue" class="rp-queue"></ul>
-                    <p id="rp-queue-empty" class="rp-queue-none muted" hidden>End of queue</p>
+            </div>
+
+            <div id="rp-view-queue" class="rp-view" hidden>
+                <div class="rp-empty" id="rp-qv-empty">
+                    <div class="rp-empty-icon">♪</div>
+                    <p>Nothing playing</p>
                 </div>
-                <div class="rp-divider"></div>
-                <div class="rp-section">
-                    <h3 class="rp-heading">About the Artist</h3>
-                    <div id="rp-artist-info" class="rp-artist-card-wrap"></div>
+                <div id="rp-qv-body" style="display:none">
+                    <div class="rp-qv-section">
+                        <h3 class="rp-heading">Now Playing</h3>
+                        <div id="rp-qv-current"></div>
+                    </div>
+                    <div class="rp-divider"></div>
+                    <div class="rp-qv-section">
+                        <h3 class="rp-heading">Next Up</h3>
+                        <ul id="rp-qv-list" class="rp-queue"></ul>
+                        <p id="rp-qv-none" class="muted" hidden style="font-size:12px;padding:4px 0">Queue is empty</p>
+                    </div>
                 </div>
+            </div>
+            <div id="rp-view-lyrics" class="rp-view" hidden>
+                <div id="rp-lyrics-empty" class="rp-empty">
+                    <div class="rp-empty-icon">♪</div>
+                    <p>No lyrics found</p>
+                </div>
+                <div id="rp-lyrics-loading" class="rp-empty" style="display:none">
+                    <p class="muted" style="font-size:13px">Loading lyrics…</p>
+                </div>
+                <div id="rp-lyrics-body" class="lyrics-body" style="display:none"></div>
             </div>
         </aside>
 
         <footer class="player">
             <div class="player-track">
-                <img id="player-art" src="" alt="" hidden>
+                <img id="player-art" alt="" hidden>
                 <div class="player-meta">
                     <div id="player-title" class="player-title">Pick a track</div>
                     <div id="player-artist" class="player-artist"></div>
@@ -126,6 +178,7 @@
                 </div>
             </div>
             <div class="player-volume">
+                <button id="player-queue-btn" type="button" class="ctrl-btn" aria-label="Queue" title="Queue">☰</button>
                 <span class="vol-icon">♪</span>
                 <input type="range" id="player-volume" min="0" max="100" value="70">
             </div>

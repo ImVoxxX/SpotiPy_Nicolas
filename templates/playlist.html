@@ -46,7 +46,11 @@
             data-uri="{{ tracks[0].uri }}"
             data-context-uri="{{ playlist.uri }}"
             data-index="0"
+            data-is-playing="0"
             aria-label="Play playlist">▶</button>
+    <button class="pl-shuffle-btn ctrl-btn" type="button"
+            data-playlist-uri="{{ playlist.uri }}"
+            aria-label="Shuffle" title="Shuffle playlist">⇄</button>
     {% else %}
     <button class="pl-play-btn" type="button" disabled aria-label="Play playlist">▶</button>
     {% endif %}

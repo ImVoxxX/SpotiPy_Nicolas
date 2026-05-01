@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import album_card, artist_card, track_card %}
+{% from '_macros.html' import album_card, artist_card, playlist_card %}
 
 {% block title %}Home · Spotipy{% endblock %}
 
@@ -8,20 +8,15 @@
     <h1>Welcome back{% if current_user %}, {{ current_user.display_name }}{% endif %}</h1>
 </section>
 
-{% if recent %}
+{% if recent_contexts %}
 <section class="row">
     <h2>Recently played</h2>
     <div class="card-grid">
-        {% for t in recent %}{{ track_card(t) }}{% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{% if top_tracks %}
-<section class="row">
-    <h2>Your top tracks this month</h2>
-    <div class="card-grid">
-        {% for t in top_tracks %}{{ track_card(t) }}{% endfor %}
+        {% for item in recent_contexts %}
+            {% if item.type == 'artist' %}{{ artist_card(item) }}
+            {% else %}{{ playlist_card(item) }}
+            {% endif %}
+        {% endfor %}
     </div>
 </section>
 {% endif %}

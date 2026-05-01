@@ -1,5 +1,7 @@
 .env
 .cache
+.pins.json
+static/custom
 __pycache__/
 *.pyc
 *.pyo

@@ -23,23 +23,63 @@
     </div>
 </header>
 
-{% if top_tracks %}
 <section class="row">
     <h2>Popular</h2>
+    {% if top_tracks %}
     <table class="track-list">
+        <thead>
+            <tr>
+                <th class="col-num">#</th>
+                <th>Title</th>
+                <th class="col-album">Album</th>
+                <th class="col-time">Time</th>
+            </tr>
+        </thead>
         <tbody>
-            {% for t in top_tracks[:5] %}{{ track_row(t, loop.index) }}{% endfor %}
+            {% for t in top_tracks %}
+            <tr>
+                <td class="track-num-cell">
+                    <span class="track-num">{{ loop.index }}</span>
+                    <button type="button" class="track-play" data-uri="{{ t.uri }}">▶</button>
+                </td>
+                <td>
+                    <div class="track-cell">
+                        {% if t.album and t.album.images %}
+                            <img src="{{ t.album.images[-1].url }}" alt="">
+                        {% endif %}
+                        <div>
+                            <div class="track-title">{{ t.name }}</div>
+                            <div>
+                                {% for a in t.artists %}
+                                    <a href="{{ url_for('artist', artist_id=a.id) }}" class="track-artist">{{ a.name }}</a>{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td class="track-album">
+                    {% if t.album %}
+                        <a href="{{ url_for('album', album_id=t.album.id) }}">{{ t.album.name }}</a>
+                    {% endif %}
+                </td>
+                <td class="track-duration">{{ t.duration_ms | duration }}</td>
+            </tr>
+            {% endfor %}
         </tbody>
     </table>
+    {% else %}
+    <p class="muted" style="font-size:14px;padding:8px 0">No tracks found.</p>
+    {% endif %}
 </section>
-{% endif %}
 
-{% if albums %}
 <section class="row">
     <h2>Discography</h2>
+    {% if albums %}
     <div class="card-grid">
         {% for al in albums %}{{ album_card(al) }}{% endfor %}
     </div>
+    {% else %}
+    <p class="muted" style="font-size:14px;padding:8px 0">No albums found.</p>
+    {% endif %}
 </section>
-{% endif %}
 {% endblock %}
