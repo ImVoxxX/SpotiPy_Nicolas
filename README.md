@@ -4,7 +4,7 @@ This is a one-person project for a portfolio and probably won't be a public repo
 
 # SpotiPy_Nicolas
 
-A non-exact, Spotify-flavored web app built on top of the [spotipy](https://spotipy.readthedocs.io/) library. Log in with your real Spotify account and browse your top tracks, top artists, recently played, your playlists, and search the catalog — all in a Spotify-style dark UI with 30-second preview playback.
+A non-exact, Spotify-flavored web app built on top of the [spotipy](https://spotipy.readthedocs.io/) library. Log in with your real Spotify account and browse your top tracks, top artists, recently played, your playlists, and search the catalog — all in a Spotify-style dark UI with full-track playback through the Spotify Web Playback SDK.
 
 ## Features
 
@@ -13,14 +13,20 @@ A non-exact, Spotify-flavored web app built on top of the [spotipy](https://spot
 - Search across tracks, artists, albums, and playlists
 - Browse your playlists, liked songs, and top items
 - Artist and album detail pages
-- 30-second preview playback in a Spotify-style now-playing bar
+- **Full-track playback** via the Spotify Web Playback SDK — requires **Spotify Premium**
+- Now-playing bar with shuffle, repeat, seek, and volume
+- Right panel with Now Playing, Queue, and time-synced lyrics
+- Playlist renaming, cover-image upload, and pinning to the sidebar
+- Optional custom background image (drop one into `static/custom/`)
 
 ## Setup
 
-### 1. Python and node versions needed to use the program
+### 1. Requirements
 
-Python: 3.13.1  
-node: 18.17.0
+Python: 3.13.1
+
+Spotify **Premium** is required — the Web Playback SDK will not stream audio on a free account.
+No Node.js is needed; there is no JavaScript build step.
 
 ### 2. Create a Spotify app
 
@@ -73,9 +79,10 @@ Open <http://127.0.0.1:5000> in your browser, log in with Spotify, and explore.
 
 ## Notes
 
-- Playback uses the 30-second `preview_url` returned by the Spotify API. Not every track has a preview — when missing, the play button is hidden for that row.
-- Full-track playback would require Spotify Premium and the Web Playback SDK — out of scope for this replica.
-- Spotify deprecated several endpoints (recommendations, related artists, audio features) for new apps in late 2024. This project intentionally avoids those.
+- Playback is full-track via the Spotify Web Playback SDK, which registers the browser as a Spotify Connect device named "Spotipy Web Player". Spotify Premium is required; on a free account the player silently does nothing.
+- The OAuth token is held in the signed Flask session, so each browser session is its own login.
+- Lyrics come from [lrclib.net](https://lrclib.net), not Spotify — Spotify's API does not expose lyrics.
+- Spotify deprecated several endpoints (recommendations, related artists, audio features, featured playlists, and `preview_url`) for apps in Development Mode in late 2024. This project cannot use those and does not attempt to.
 - Built with Flask, spotipy, and vanilla HTML/CSS/JS — no build step.
 
 ## Rights & Legal
@@ -86,8 +93,8 @@ This project is an **unofficial, non-commercial fan replica** built for educatio
 
 All music data, artwork, track metadata, and audio previews are served directly from the **Spotify Web API** and remain the intellectual property of Spotify AB and the respective rights holders (artists, labels, distributors). Use of the Spotify API is governed by the [Spotify Developer Terms of Service](https://developer.spotify.com/terms) and the [Spotify Platform Rules](https://developer.spotify.com/documentation/design-and-branding/). This project complies with those terms by:
 
-- Using OAuth 2.0 as required — no credentials are stored server-side beyond the session token.
-- Limiting playback to the 30-second `preview_url` clips provided by the API (full-track streaming is not implemented).
+- Using OAuth 2.0 as required. Access and refresh tokens are kept in the signed Flask session cookie and are never written to disk or shared between users.
+- Streaming audio only through Spotify's official Web Playback SDK, which enforces Premium entitlement and reports playback to Spotify. No audio is proxied, downloaded, or re-hosted.
 - Not reselling, redistributing, or caching Spotify content beyond what the API permits.
 - Displaying Spotify branding and attribution where content is sourced from Spotify.
 
@@ -102,9 +109,12 @@ The source code in this repository is released for **personal and educational us
 ## Project layout
 
 ```
-app.py                 Flask app and routes
-templates/             Jinja templates (base, login, home, search, playlist, album, artist, library)
+app.py                 Flask app, routes, OAuth, and the in-memory TTL cache
+templates/             Jinja templates (base, login, home, search, playlist,
+                       album, artist, library, error)
 templates/_macros.html Reusable card and track-row macros
 static/css/style.css   Spotify-like dark theme
-static/js/player.js    30-second preview audio player
+static/js/player.js    Web Playback SDK player, PJAX navigation, lyrics,
+                       queue panel, and resizable layout
+static/custom/         Drop bg.jpg here for a custom background (gitignored)
 ```

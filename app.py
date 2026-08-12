@@ -1,5 +1,6 @@
 import json
 import os
+import secrets
 import time
 from datetime import timedelta
 from functools import wraps
@@ -9,7 +10,7 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 
 import requests
 import spotipy
-from spotipy.cache_handler import CacheFileHandler
+from spotipy.cache_handler import FlaskSessionCacheHandler
 from spotipy.oauth2 import SpotifyOAuth
 
 load_dotenv()
@@ -17,8 +18,6 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
-
-TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), ".cache")
 
 # ---- In-memory cache -------------------------------------------------------
 _cache: dict = {}
@@ -58,17 +57,26 @@ def _load_pins():
 
 
 def _save_pins(data):
-    with open(PINS_PATH, "w") as f:
+    # Write-then-rename so a crash mid-write can't truncate the existing pins.
+    tmp = f"{PINS_PATH}.tmp"
+    with open(tmp, "w") as f:
         json.dump(data, f)
+    os.replace(tmp, PINS_PATH)
 
 SCOPES = " ".join([
     "user-read-private",
     "user-read-email",
     "user-top-read",
     "user-library-read",
+    "user-library-modify",
     "user-read-recently-played",
     "playlist-read-private",
     "playlist-read-collaborative",
+    "playlist-modify-private",
+    "playlist-modify-public",
+    "ugc-image-upload",
+    "user-follow-read",
+    "user-follow-modify",
     "streaming",
     "user-read-playback-state",
     "user-modify-playback-state",
@@ -80,13 +88,16 @@ def make_session_permanent():
     session.permanent = True
 
 
-def get_auth_manager():
+def get_auth_manager(state=None):
+    # Tokens live in the signed Flask session, so each browser session is its own
+    # login. A file-based cache would make the whole process share one account.
     return SpotifyOAuth(
         client_id=os.environ["SPOTIPY_CLIENT_ID"],
         client_secret=os.environ["SPOTIPY_CLIENT_SECRET"],
         redirect_uri=os.environ["SPOTIPY_REDIRECT_URI"],
         scope=SCOPES,
-        cache_handler=CacheFileHandler(cache_path=TOKEN_CACHE_PATH),
+        cache_handler=FlaskSessionCacheHandler(session),
+        state=state,
         show_dialog=False,
     )
 
@@ -182,7 +193,8 @@ def edit_playlist_image(sp, playlist_id):
 
 
 @app.route("/pin/<playlist_id>", methods=["POST"])
-def toggle_pin(playlist_id):
+@login_required
+def toggle_pin(_sp, playlist_id):
     user_id = session.get("user_id", "_default")
     data = _load_pins()
     pinned = data.get(user_id, [])
@@ -197,17 +209,24 @@ def toggle_pin(playlist_id):
 
 @app.route("/login")
 def login():
-    auth_manager = get_auth_manager()
+    state = secrets.token_urlsafe(32)
+    session["oauth_state"] = state
+    auth_manager = get_auth_manager(state=state)
     auth_url = auth_manager.get_authorize_url()
     return render_template("login.html", auth_url=auth_url)
 
 
 @app.route("/callback")
 def callback():
-    auth_manager = get_auth_manager()
+    if request.args.get("error"):
+        return redirect(url_for("login"))
+    expected_state = session.pop("oauth_state", None)
+    if not expected_state or request.args.get("state") != expected_state:
+        return redirect(url_for("login"))
     code = request.args.get("code")
     if not code:
         return redirect(url_for("login"))
+    auth_manager = get_auth_manager(state=expected_state)
     auth_manager.get_access_token(code, as_dict=False)
     return redirect(url_for("home"))
 
@@ -296,12 +315,15 @@ def playlist(sp, playlist_id):
     cached = _cget(f"pl:{playlist_id}")
     if cached:
         return render_template("playlist.html", **cached)
-    pl = sp.playlist(playlist_id)
     try:
-        result = sp.playlist_tracks(playlist_id)
+        pl = sp.playlist(playlist_id)
+    except spotipy.SpotifyException as e:
+        return render_template("error.html", message=str(e)), 404
+    try:
+        result = sp.playlist_items(playlist_id)
         tracks = []
         while result:
-            tracks += [item["item"] for item in result.get("items", []) if item.get("item")]
+            tracks += [item["track"] for item in result.get("items", []) if item.get("track")]
             result = sp.next(result) if result.get("next") else None
         total = len(tracks)
     except spotipy.SpotifyException:
@@ -318,7 +340,10 @@ def album(sp, album_id):
     cached = _cget(f"al:{album_id}")
     if cached:
         return render_template("album.html", **cached)
-    al = sp.album(album_id)
+    try:
+        al = sp.album(album_id)
+    except spotipy.SpotifyException as e:
+        return render_template("error.html", message=str(e)), 404
     data = dict(album=al)
     _cset(f"al:{album_id}", data, ttl=300)
     return render_template("album.html", **data)
@@ -330,15 +355,19 @@ def artist(sp, artist_id):
     cached = _cget(f"ar:{artist_id}")
     if cached:
         return render_template("artist.html", **cached)
-    ar = sp.artist(artist_id)
-    artist_name = ar["name"]
     try:
-        top = sp.search(q=artist_name, type="track", limit=10).get("tracks", {}).get("items", [])[:5]
-    except Exception:
+        ar = sp.artist(artist_id)
+    except spotipy.SpotifyException as e:
+        return render_template("error.html", message=str(e)), 404
+    try:
+        top = sp.artist_top_tracks(artist_id).get("tracks", [])[:10]
+    except spotipy.SpotifyException:
         top = []
     try:
-        albums_raw = sp.search(q=artist_name, type="album", limit=10).get("albums", {}).get("items", [])
-    except Exception:
+        albums_raw = sp.artist_albums(
+            artist_id, album_type="album,single", limit=50
+        ).get("items", [])
+    except spotipy.SpotifyException:
         albums_raw = []
     seen, albums = set(), []
     for al in albums_raw:
